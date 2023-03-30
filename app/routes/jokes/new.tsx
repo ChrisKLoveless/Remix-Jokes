@@ -1,10 +1,23 @@
-import type { ActionArgs, LoaderArgs } from "@remix-run/node";
-import { redirect, json } from "@remix-run/node";
-import { Link, useCatch, useActionData, Form } from "@remix-run/react";
+import type {
+  ActionArgs,
+  LoaderArgs,
+} from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
+import {
+  Form,
+  Link,
+  useActionData,
+  useCatch,
+  useNavigation,
+} from "@remix-run/react";
 
+import { JokeDisplay } from "~/components/joke";
 import { db } from "~/utils/db.server";
 import { badRequest } from "~/utils/request.server";
-import { getUserId, requireUserId } from "~/utils/session.server";
+import {
+  getUserId,
+  requireUserId,
+} from "~/utils/session.server";
 
 export const loader = async ({ request }: LoaderArgs) => {
   const userId = await getUserId(request);
@@ -55,12 +68,34 @@ export const action = async ({ request }: ActionArgs) => {
     });
   }
 
-  const joke = await db.joke.create({ data : { ...fields, jokesterId: userId }});
+  const joke = await db.joke.create({
+    data: { ...fields, jokesterId: userId },
+  });
   return redirect(`/jokes/${joke.id}`);
 };
 
 export default function NewJokeRoute() {
   const actionData = useActionData<typeof action>();
+  const navigation = useNavigation();
+
+  if (navigation.formData) {
+    const name = navigation.formData.get("name");
+    const content = navigation.formData.get("content");
+    if (
+      typeof name === "string" &&
+      typeof content === "string" &&
+      !validateJokeContent(content) &&
+      !validateJokeName(name)
+    ) {
+      return (
+        <JokeDisplay
+          joke={{ name, content }}
+          isOwner={true}
+          canDelete={false}
+        />
+      );
+    }
+  }
 
   return (
     <div>
